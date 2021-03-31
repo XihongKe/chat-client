@@ -1,5 +1,21 @@
 <template>
   <a-row type="flex" id="app">
+    <!--服务器选择对话框-->
+    <a-modal
+        title="连接服务器"
+        :visible="hostModalVisible"
+        :closable="false"
+        @ok="wsInit">
+      <template slot="footer">
+        <a-button key="submit" :max="10" @click="wsInit" type="primary"
+                  :disabled="host === ''">
+          保存
+        </a-button>
+      </template>
+      <a-form-item label="服务器ip地址">
+        <a-input placeholder="请输入服务器ip地址" v-model="host"></a-input>
+      </a-form-item>
+    </a-modal>
     <!--创建用户对话框-->
     <create-user ref="createUser" @submit="userSubmit"></create-user>
     <!--好友列表-->
@@ -64,57 +80,64 @@ const MSG_TYPE_SUBMIT_USER_INFO = 5;
 export default {
   data: function () {
     return {
+      host: "127.0.0.1:8282",
       userInfo: {}, // 用户自身的数据
       receiver: null, // 当前聊天对象ID
       conn: null, // websocket连接
       chatList: [], // 用户&群组列表
       curWindow: [], // 当前窗口展示的消息列表
       msg: "", // 当前编辑的消息
-      createUserVisible: false,
-      createUserLoading: false,
+      hostModalVisible: false,
+      hostModalLoading: false,
+
     };
   },
   mounted: function () {
-    this.$refs.createUser.show()
     if (!window["WebSocket"]) {
-      this.curWindow.push({
-        name: 'SYSTEM',
-        head_img_url: "",
-        content: "WebSockets Not Support.",
-      })
-      return;
+      return this.$notification.info({
+        message: 'SYSTEM',
+        description: '浏览器不支持WebSocket',
+        duration: 1.5
+      });
     }
-    this.createUserVisible = true;
-    this.conn = new WebSocket("ws://localhost:8282/ws");
-    this.conn.onclose = () => {
-      this.curWindow.push({
-        name: 'SYSTEM',
-        head_img_url: "",
-        content: "Connection Closed.",
-      })
-    }
-    this.conn.onmessage = (evt) => {
-      let data = JSON.parse(evt.data);
-      console.log("收到消息包：", data)
-      switch (data.type) {
-        case MSG_TYPE_USER:  // 处理用户消息
-          this.userHandler(data)
-          break;
-        case MSG_TYPE_GROUP:  // 处理群组消息
-          this.groupHandler(data)
-          break;
-        case MSG_TYPE_GET_USER:  // 获取好友列表
-          this.getUserHandler(data)
-          break;
-        case MSG_TYPE_USER_INFO: // 获取服务器下发的自身用户信息
-          this.userInfoHandler(data)
-          break;
-        default:
-          console.log("未定义的消息类型：", data.type)
-      }
-    }
+    this.hostModalVisible = true;
   },
   methods: {
+    // 连接服务器
+    wsInit: function () {
+      this.hostModalVisible = false;
+      this.conn = new WebSocket("ws://" + this.host + "/ws");
+      this.conn.onopen = () => {
+        this.$refs.createUser.show() // 打开用户信息选择弹窗
+      }
+      this.conn.onclose = () => {
+        this.curWindow.push({
+          name: 'SYSTEM',
+          head_img_url: "",
+          content: "连接断开或无效",
+        })
+      }
+      this.conn.onmessage = (evt) => {
+        let data = JSON.parse(evt.data);
+        console.log("收到消息包：", data)
+        switch (data.type) {
+          case MSG_TYPE_USER:  // 处理用户消息
+            this.userHandler(data)
+            break;
+          case MSG_TYPE_GROUP:  // 处理群组消息
+            this.groupHandler(data)
+            break;
+          case MSG_TYPE_GET_USER:  // 获取好友列表
+            this.getUserHandler(data)
+            break;
+          case MSG_TYPE_USER_INFO: // 获取服务器下发的自身用户信息
+            this.userInfoHandler(data)
+            break;
+          default:
+            console.log("未定义的消息类型：", data.type)
+        }
+      }
+    },
     // 提交用户信息
     userSubmit: function (info) {
       this.conn.send(JSON.stringify({
