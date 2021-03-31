@@ -1,18 +1,20 @@
 # chat-client
 
+一个聊天客户端
+
 ## Project setup
 ```
 yarn install
 ```
 
-### Compiles and hot-reloads for development
+### 启动开发服务器
 ```
-yarn serve
+yarn electron:serve
 ```
 
-### Compiles and minifies for production
+### 构建应用程序
 ```
-yarn build
+yarn electron:build
 ```
 
 ### Lints and fixes files
