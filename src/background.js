@@ -15,6 +15,7 @@ async function createWindow() {
   const win = new BrowserWindow({
     width: 900, // 窗口宽度
     height: 700,// 窗口高度
+    titleBarStyle: "hidden", // 去除标题框
     webPreferences: {
       
       // Use pluginOptions.nodeIntegration, leave this alone
